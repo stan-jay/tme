@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "../../",
+    "declaration": false
+  },
+  "include": ["src/**/*", "../../packages/shared/src/**/*", "../../packages/connector-sdk/src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

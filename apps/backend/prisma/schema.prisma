@@ -1,0 +1,445 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  REVIEWER
+  EXECUTOR
+  UPLOADER
+}
+
+enum UploadStatus {
+  STORED
+  REJECTED
+  DELETED
+}
+
+enum MigrationStatus {
+  ANALYZED
+  MAPPED
+  VALIDATED
+  SIMULATED
+  EXECUTING
+  COMPLETED
+  PARTIALLY_COMPLETED
+  FAILED
+  ROLLBACK_UNAVAILABLE
+  ROLLED_BACK
+}
+
+enum ExecutionRecordStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+  COMPENSATED
+}
+
+enum PluginTechnicalStatus {
+  RESEARCHING
+  SANDBOX_AVAILABLE
+  IN_DEVELOPMENT
+  TECHNICALLY_VERIFIED
+  SUSPENDED
+  DEPRECATED
+}
+
+enum PluginCommercialStatus {
+  NOT_STARTED
+  IN_DISCUSSION
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum ConnectionStatus {
+  DRAFT
+  PENDING_TEST
+  CONNECTED
+  FAILING
+  DISABLED
+}
+
+enum PipelineDefinitionStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+}
+
+enum PipelineRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  PARTIALLY_COMPLETED
+  FAILED
+  CANCEL_REQUESTED
+  CANCELLED
+}
+
+enum StageRunStatus {
+  BLOCKED
+  QUEUED
+  RUNNING
+  RETRY_WAIT
+  COMPLETED
+  FAILED
+  CANCELLED
+  SKIPPED
+}
+
+enum PipelinePartitionStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Organization {
+  id         String      @id @default(cuid())
+  name       String
+  slug       String      @unique
+  users      User[]
+  uploads    Upload[]
+  migrations Migration[]
+  auditLogs  AuditLog[]
+  connections IntegrationConnection[]
+  pipelineDefinitions PipelineDefinition[]
+  pipelineRuns PipelineRun[]
+  mappingProfiles MappingProfile[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  passwordHash   String
+  name           String
+  role           UserRole     @default(UPLOADER)
+  isActive       Boolean      @default(true)
+  uploads        Upload[]
+  migrations     Migration[]
+  auditLogs      AuditLog[]
+  lastLoginAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, email])
+  @@index([email])
+}
+
+model Upload {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedById   String
+  uploadedBy     User         @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  originalName   String
+  storagePath    String
+  mimeType       String
+  extension      String
+  sizeBytes      Int
+  sha256         String
+  status         UploadStatus @default(STORED)
+  migrations     Migration[]
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+
+  @@index([organizationId, createdAt])
+  @@index([sha256])
+}
+
+model Migration {
+  id               String          @id @default(cuid())
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  uploadId         String
+  upload           Upload          @relation(fields: [uploadId], references: [id], onDelete: Restrict)
+  name             String
+  sourceType       String
+  sourcePayload    Json?
+  destination      String?
+  status           MigrationStatus @default(ANALYZED)
+  version          Int             @default(1)
+  validationPassed Boolean         @default(false)
+  mappingsApproved Boolean         @default(false)
+  simulationPassed Boolean         @default(false)
+  totalRows        Int             @default(0)
+  successRows      Int             @default(0)
+  failedRows       Int             @default(0)
+  executedAt       DateTime?
+  rolledBackAt     DateTime?
+  columnMappings   ColumnMapping[]
+  validationIssues ValidationIssue[]
+  executionRecords ExecutionRecord[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([organizationId, status])
+  @@index([userId])
+  @@index([uploadId])
+}
+
+model ColumnMapping {
+  id            String    @id @default(cuid())
+  migrationId   String
+  migration     Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  sourceColumn  String
+  targetField   String
+  confidence    Float
+  userConfirmed Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([migrationId, sourceColumn])
+}
+
+model ValidationIssue {
+  id          String    @id @default(cuid())
+  migrationId String
+  migration   Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  type        String
+  code        String?
+  rowNumber   Int?
+  column      String?
+  message     String
+  value       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([migrationId, type])
+}
+
+model ExecutionRecord {
+  id             String                @id @default(cuid())
+  migrationId    String
+  migration      Migration             @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  idempotencyKey String                @unique
+  entityId       String
+  entityType     String
+  status         ExecutionRecordStatus @default(PENDING)
+  destinationId  String?
+  attemptCount   Int                   @default(0)
+  errorCode      String?
+  errorMessage   String?
+  requestHash    String
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([migrationId, status])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action         String
+  entityType     String
+  entityId       String
+  outcome        String
+  ipAddress      String?
+  userAgent      String?
+  details        Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([entityId])
+  @@index([userId])
+}
+
+model PluginCatalog {
+  id                         String                 @id
+  name                       String
+  version                    String
+  category                   String
+  manifest                   Json
+  installed                  Boolean                @default(true)
+  technicalStatus            PluginTechnicalStatus  @default(RESEARCHING)
+  commercialStatus           PluginCommercialStatus @default(NOT_STARTED)
+  globalEnabled              Boolean                @default(false)
+  newConnectionsAllowed      Boolean                @default(false)
+  existingConnectionsAllowed Boolean                @default(false)
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  connections                IntegrationConnection[]
+
+  @@index([category])
+  @@index([globalEnabled])
+}
+
+model IntegrationConnection {
+  id                  String           @id @default(cuid())
+  organizationId      String
+  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pluginId            String
+  plugin              PluginCatalog    @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+  name                String
+  status              ConnectionStatus @default(DRAFT)
+  enabled             Boolean          @default(false)
+  publicConfiguration Json
+  encryptedSecrets    String?
+  encryptionKeyId     String?
+  lastTestedAt        DateTime?
+  lastTestSucceeded   Boolean?
+  lastTestMessage     String?
+  createdById         String
+  updatedById         String
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId, pluginId])
+  @@index([organizationId, status])
+}
+
+model PipelineDefinition {
+  id                     String                   @id @default(cuid())
+  organizationId         String
+  organization           Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                   String
+  description            String?
+  operation              String
+  status                 PipelineDefinitionStatus @default(DRAFT)
+  version                Int                      @default(1)
+  sourceConnectionId     String?
+  destinationConnectionIds Json
+  knowledgePackIds       Json
+  schedule               Json?
+  maxParallelStages      Int                      @default(4)
+  maxParallelPartitions  Int                      @default(4)
+  createdById            String
+  updatedById            String
+  stages                 PipelineStageDefinition[]
+  runs                   PipelineRun[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId, status])
+}
+
+model PipelineStageDefinition {
+  id                  String             @id @default(cuid())
+  pipelineDefinitionId String
+  pipelineDefinition  PipelineDefinition @relation(fields: [pipelineDefinitionId], references: [id], onDelete: Cascade)
+  key                 String
+  kind                String
+  capability          String
+  dependsOn           Json
+  connectionId        String?
+  knowledgePackId     String?
+  configuration       Json
+  maxAttempts         Int                @default(3)
+  backoffMs           Int                @default(1000)
+  maxBackoffMs        Int                @default(30000)
+  stageRuns           PipelineStageRun[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@unique([pipelineDefinitionId, key])
+  @@index([pipelineDefinitionId])
+}
+
+model PipelineRun {
+  id                  String            @id @default(cuid())
+  organizationId      String
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pipelineDefinitionId String
+  pipelineDefinition  PipelineDefinition @relation(fields: [pipelineDefinitionId], references: [id], onDelete: Restrict)
+  definitionVersion   Int
+  operation           String
+  status              PipelineRunStatus @default(QUEUED)
+  initiatedById       String
+  idempotencyKey      String
+  input               Json
+  totalStages         Int
+  completedStages     Int               @default(0)
+  failedStages        Int               @default(0)
+  startedAt           DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  stageRuns           PipelineStageRun[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, status])
+  @@index([pipelineDefinitionId, createdAt])
+}
+
+model PipelineStageRun {
+  id                   String         @id @default(cuid())
+  pipelineRunId        String
+  pipelineRun          PipelineRun    @relation(fields: [pipelineRunId], references: [id], onDelete: Cascade)
+  stageDefinitionId    String
+  stageDefinition      PipelineStageDefinition @relation(fields: [stageDefinitionId], references: [id], onDelete: Restrict)
+  stageKey             String
+  status               StageRunStatus @default(BLOCKED)
+  attemptCount         Int            @default(0)
+  checkpoint           Json?
+  output               Json?
+  errorCode            String?
+  errorMessage         String?
+  queuedAt             DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  heartbeatAt          DateTime?
+  partitions           PipelineRunPartition[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@unique([pipelineRunId, stageKey])
+  @@index([status, queuedAt])
+  @@index([pipelineRunId, status])
+}
+
+model MappingProfile {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sourceSignature String
+  entityType     String
+  mappings       Json
+  createdById    String
+  useCount       Int          @default(1)
+  lastUsedAt     DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, sourceSignature])
+  @@index([organizationId])
+}
+
+model PipelineRunPartition {
+  id              String                  @id @default(cuid())
+  stageRunId      String
+  stageRun        PipelineStageRun        @relation(fields: [stageRunId], references: [id], onDelete: Cascade)
+  partitionKey    String
+  dependencyLevel Int
+  entityTypes     Json
+  itemCount       Int
+  status          PipelinePartitionStatus @default(QUEUED)
+  checkpoint      Json?
+  attemptCount    Int                     @default(0)
+  errorMessage    String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@unique([stageRunId, partitionKey])
+  @@index([stageRunId, dependencyLevel, status])
+}

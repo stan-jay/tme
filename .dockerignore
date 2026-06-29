@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+dist
+.vscode
+.idea
+*.log
+apps/backend/uploads
+apps/backend/node_modules
+apps/frontend/node_modules
+packages/shared/node_modules

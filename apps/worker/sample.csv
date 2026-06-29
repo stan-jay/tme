@@ -1,0 +1,4 @@
+customer,invoice_date,amount,description
+Alice,2024-01-01,100.50,Sale A
+Bob,2024-02-15,250.00,Sale B
+Alice,2024-03-20,75.00,Sale C

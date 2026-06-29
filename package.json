@@ -1,0 +1,27 @@
+{
+  "name": "tme",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-backend.ps1",
+    "dev:frontend": "npm --workspace @tme/frontend run dev",
+    "dev:worker": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-worker.ps1",
+    "setup:db": "npm --workspace @tme/backend run prisma:push",
+    "prisma": "npm --workspace @tme/backend exec -- prisma",
+    "build": "npm --workspace @tme/backend run build && npm --workspace @tme/frontend run build",
+    "test:backend": "npm --workspace @tme/backend run test",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "tsc -p apps/backend/tsconfig.json --noEmit",
+    "typecheck:frontend": "tsc -p apps/frontend/tsconfig.json --noEmit",
+    "lint": "npm run typecheck",
+    "format": "npx prettier --write ."
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.5.0"
+  }
+}
