@@ -2,7 +2,7 @@
 
 This quickstart is for authorized Stan Jay Solutions developers working in the private TME repository.
 
-Complete the company onboarding process in the internal `stanjay-foundation` repository before using this guide.
+Complete the company onboarding process in the internal `stan_jay_dev_program` repository before using this guide.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ Complete the company onboarding process in the internal `stanjay-foundation` rep
 Projects/
 ├── setup/                # shared local services
 ├── tme/                  # this repository
-└── stanjay-foundation/   # internal handbook, policies, onboarding, and templates
+└── stan_jay_dev_program/ # internal handbook, policies, onboarding, and templates
 ```
 
 ## Setup
@@ -151,4 +151,4 @@ Frontend cannot reach backend:
 - Repository-specific contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Security baseline: [docs/P0-SECURITY-BASELINE.md](docs/P0-SECURITY-BASELINE.md)
-- Company-wide handbook and onboarding: internal `stanjay-foundation` repository
+- Company-wide handbook and onboarding: internal `stan_jay_dev_program` repository

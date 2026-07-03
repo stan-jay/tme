@@ -6,7 +6,7 @@ Contributions are accepted only from authorized Stan Jay Solutions team members,
 
 ## Before You Contribute
 
-Before accessing or contributing to this repository, each developer must complete the company onboarding process maintained in the internal `stanjay-foundation` repository.
+Before accessing or contributing to this repository, each developer must complete the company onboarding process maintained in the internal `stan_jay_dev_program` repository.
 
 That process should include:
 
@@ -17,7 +17,7 @@ That process should include:
 - Security and secrets-handling expectations
 - Development environment setup
 
-This repository does not duplicate the full company handbook. The internal `stanjay-foundation` repository is the source of truth for company-wide policies, legal onboarding, engineering standards, reusable templates, and developer progression.
+This repository does not duplicate the full company handbook. The internal `stan_jay_dev_program` repository is the source of truth for company-wide policies, legal onboarding, engineering standards, reusable templates, and developer progression.
 
 ## Repository Scope
 
@@ -31,7 +31,7 @@ Use this repository for TME-specific work:
 - Migration workflow and audit behavior
 - TME-specific documentation and tests
 
-Company-wide standards, legal templates, onboarding checklists, and reusable project templates belong in `stanjay-foundation`.
+Company-wide standards, legal templates, onboarding checklists, and reusable project templates belong in `stan_jay_dev_program`.
 
 ## Development Workflow
 

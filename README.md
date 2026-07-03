@@ -87,7 +87,7 @@ Projects/
 ├── setup/        # shared Docker services such as Postgres and Redis
 ├── tme/          # this repository
 ├── Erp/          # optional ERP target project
-└── stanjay-foundation/
+└── stan_jay_dev_program/
     └──           # internal company handbook, policies, templates, and onboarding
 ```
 
@@ -138,7 +138,7 @@ See [docs/architecture.md](docs/architecture.md) for architectural rules and [do
 
 This is a private Stan Jay Solutions product repository. Developers must complete the company onboarding process before receiving access.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for repository-specific contribution rules. The internal `stanjay-foundation` repository is the source of truth for the company handbook, legal onboarding, engineering standards, access policy, and reusable project templates.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for repository-specific contribution rules. The internal `stan_jay_dev_program` repository is the source of truth for the company handbook, legal onboarding, engineering standards, access policy, and reusable project templates.
 
 ## License
 

@@ -6,7 +6,7 @@ Do not report security vulnerabilities, credentials, customer data exposure, or 
 
 ## Reporting a Security Issue
 
-Report security concerns through the internal Stan Jay Solutions security process documented in the `stanjay-foundation` repository.
+Report security concerns through the internal Stan Jay Solutions security process documented in the `stan_jay_dev_program` repository.
 
 Include:
 
