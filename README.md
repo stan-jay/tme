@@ -1,3 +1,54 @@
+# Transaction Migration Engine
+
+Transaction Migration Engine (TME) is an AI-assisted data migration platform for moving business records between systems such as Excel, CSV, WooCommerce, QuickBooks, Sage, Odoo, ERPNext, Zoho Books, Shopify, and custom ERP systems.
+
+The goal is to help businesses migrate customers, suppliers, products, invoices, purchases, payments, journals, inventory records, and opening balances with better validation, audit trails, and error reporting.
+
+TME is designed to handle real-world messy data and provide mappings, validation, and an auditable pipeline to import clean data into destination systems.
+
+## What TME does
+
+- Imports data from CSV, Excel, APIs, and other business systems
+- Maps source fields to a universal migration format
+- Validates records before migration
+- Detects duplicates and missing required fields
+- Tracks migration jobs and migration history
+- Provides audit logs for every imported record
+- Supports background processing for large migration jobs
+- Prepares clean data for ERP, accounting, POS, and e-commerce systems
+
+## Current focus
+
+This project is currently focused on:
+
+- CSV and Excel import
+- Universal transaction format
+- Validation rules
+- Migration job tracking
+- Background processing with Redis/BullMQ
+- API-first architecture
+- Developer-friendly documentation
+
+## Local development workspace
+
+We recommend the following parent workspace layout:
+
+```
+Projects/
+├── setup/        # shared Docker services (Postgres, Redis, etc.)
+├── tme/          # this repository
+└── Erp/          # optional ERP target project
+```
+
+Start shared services from the `setup/` repository, then run the TME services from the `tme/` folder.
+
+## Contributing
+
+See CONTRIBUTING.md for contribution guidelines, commit format, and onboarding steps.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 # Stan Jay Business Language Platform
 
 TME is a secure business-data pipeline platform centered on **SJBL — Stan Jay

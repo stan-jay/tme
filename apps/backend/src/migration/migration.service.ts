@@ -121,7 +121,9 @@ export class MigrationService {
       this.prisma.columnMapping.createMany({
         data: mappings.map((mapping) => ({
           migrationId,
-          ...mapping,
+          sourceColumn: mapping.sourceColumn,
+          targetField: mapping.targetField,
+          confidence: mapping.confidence,
           userConfirmed: confirmed,
         })),
       }),

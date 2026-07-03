@@ -1,57 +1,23 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: sj_tme
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-    ports:
-      - '127.0.0.1:5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d sj_tme']
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ['redis-server', '--appendonly', 'yes']
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 12
-
   backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL with URL-encoded credentials}
+      DATABASE_URL: postgresql://Admin:Admin123@sj-postgres:5432/sjs_db
       PORT: 4000
-      REDIS_URL: redis://redis:6379
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET}
+      REDIS_URL: redis://sj-redis:6379
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-g7V3sx0kA4L9Pq2R8cUfHyXwZtBnV4d1}
       AUTH_TOKEN_TTL_SECONDS: 3600
       CORS_ORIGINS: http://localhost:5173
-      BOOTSTRAP_ORGANIZATION_NAME: ${BOOTSTRAP_ORGANIZATION_NAME:-Stan Jay}
+      BOOTSTRAP_ORGANIZATION_NAME: ${BOOTSTRAP_ORGANIZATION_NAME:-TME}
       BOOTSTRAP_ORGANIZATION_SLUG: ${BOOTSTRAP_ORGANIZATION_SLUG:-stan-jay}
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?set BOOTSTRAP_ADMIN_EMAIL}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?set BOOTSTRAP_ADMIN_PASSWORD}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-stanjaysolutions@gmail.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Admin123}
       STAN_JAY_API_URL: ${STAN_JAY_API_URL:-http://host.docker.internal:3000/api}
       STAN_JAY_API_KEY: ${STAN_JAY_API_KEY:-}
-      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:?set INTEGRATION_ENCRYPTION_KEY}
+      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:-MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=}
       INTEGRATION_ENCRYPTION_KEY_ID: ${INTEGRATION_ENCRYPTION_KEY_ID:-local-v1}
       PIPELINE_QUEUE_DRIVER: redis
       PIPELINE_WORKER_CONCURRENCY: 4
@@ -59,6 +25,8 @@ services:
       - '127.0.0.1:4000:4000'
     volumes:
       - backend_uploads:/usr/src/app/uploads
+    networks:
+      - sjs_shared
 
   frontend:
     build:
@@ -72,6 +40,8 @@ services:
         condition: service_started
     ports:
       - '127.0.0.1:5173:80'
+    networks:
+      - sjs_shared
 
   worker:
     profiles: ['p1']
@@ -81,8 +51,13 @@ services:
     restart: unless-stopped
     expose:
       - '5000'
+    networks:
+      - sjs_shared
 
 volumes:
-  postgres_data:
-  redis_data:
   backend_uploads:
+
+networks:
+  sjs_shared:
+    external: true
+    name: sjs_shared

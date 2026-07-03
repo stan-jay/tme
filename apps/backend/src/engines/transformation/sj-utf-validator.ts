@@ -29,6 +29,38 @@ export function validateSjUtfEntities(entities: SJUTFEntity[]): RuntimeValidatio
       if (!Array.isArray(value.items) || value.items.length === 0) {
         errors.push(error(entity, 'Sale invoice requires at least one line item'));
       }
+    } else if (entity.type === 'purchase_order') {
+      requireString(value, 'purchaseOrderNumber', entity, errors);
+      requireString(value, 'supplierId', entity, errors);
+      requireString(value, 'date', entity, errors);
+      requireNumber(value, 'subtotal', entity, errors);
+      requireNumber(value, 'tax', entity, errors);
+      requireNumber(value, 'total', entity, errors);
+      if (!Array.isArray(value.items) || value.items.length === 0) {
+        errors.push(error(entity, 'Purchase order requires at least one line item'));
+      }
+    } else if (entity.type === 'credit_note') {
+      requireString(value, 'creditNoteNumber', entity, errors);
+      requireString(value, 'customerId', entity, errors);
+      requireString(value, 'date', entity, errors);
+      requireNumber(value, 'subtotal', entity, errors);
+      requireNumber(value, 'tax', entity, errors);
+      requireNumber(value, 'total', entity, errors);
+      if (!Array.isArray(value.items) || value.items.length === 0) {
+        errors.push(error(entity, 'Credit note requires at least one line item'));
+      }
+    } else if (entity.type === 'debit_note') {
+      requireString(value, 'debitNoteNumber', entity, errors);
+      requireString(value, 'supplierId', entity, errors);
+      requireString(value, 'date', entity, errors);
+      requireNumber(value, 'subtotal', entity, errors);
+      requireNumber(value, 'tax', entity, errors);
+      requireNumber(value, 'total', entity, errors);
+      if (!Array.isArray(value.items) || value.items.length === 0) {
+        errors.push(error(entity, 'Debit note requires at least one line item'));
+      }
+    } else if (entity.type === 'supplier') {
+      requireString(value, 'name', entity, errors);
     } else if (entity.type === 'customer' || entity.type === 'product') {
       requireString(value, 'name', entity, errors);
       if (entity.type === 'product') requireNumber(value, 'unitPrice', entity, errors);

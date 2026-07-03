@@ -25,7 +25,7 @@ export class StanJayAccountingPack extends BaseKnowledgePack {
     version: '0.1.0',
     systemFamily: 'stan-jay',
     languageVersion: '1.0',
-    supportedEntityTypes: ['customer', 'product', 'sale_invoice', 'payment', 'credit_note'],
+    supportedEntityTypes: ['customer', 'supplier', 'product', 'sale_invoice', 'purchase_order', 'payment', 'credit_note'],
   };
 
   protected rulesList(): EvaluableRule[] {
@@ -46,6 +46,20 @@ export class StanJayAccountingPack extends BaseKnowledgePack {
       ),
       perEntityRule(
         {
+          id: 'sj-supplier-name',
+          name: 'Supplier requires a name',
+          category: 'required-field',
+          severity: 'error',
+          entityTypes: ['supplier'],
+          description: 'Stan Jay rejects suppliers without a name.',
+        },
+        (entity) => ({
+          ok: nonEmptyString(asRecord(entity).name),
+          explanation: 'Supplier name is required',
+        }),
+      ),
+      perEntityRule(
+        {
           id: 'sj-product-price',
           name: 'Product requires a non-negative unit price',
           category: 'required-field',
@@ -56,8 +70,74 @@ export class StanJayAccountingPack extends BaseKnowledgePack {
         (entity) => {
           const price = num((entity as Product).unitPrice);
           return {
+            perEntityRule(
+              {
+                id: 'sj-debit-note-required',
+                name: 'Debit note requires number, supplier, date and at least one line',
+                category: 'required-field',
+                severity: 'error',
+                entityTypes: ['debit_note'],
+                description: 'Stan Jay rejects debit notes missing core fields or line items.',
+              },
+              (entity) => {
+                const note = entity as SaleInvoice;
+                const missing: string[] = [];
+                if (!nonEmptyString((entity as any).debitNoteNumber)) missing.push('debitNoteNumber');
+                if (!nonEmptyString((note as any).supplierId)) missing.push('supplierId');
+                if (!nonEmptyString(note.date)) missing.push('date');
+                if (!Array.isArray(note.items) || note.items.length === 0) missing.push('items');
+                return {
+                  ok: missing.length === 0,
+                  explanation: missing.length ? `Missing required fields: ${missing.join(', ')}` : 'All required fields present',
+                };
+              },
+            ),
             ok: price !== null && price >= 0,
             explanation: `Unit price is ${(entity as Product).unitPrice}`,
+          };
+        },
+      ),
+      perEntityRule(
+        {
+          id: 'sj-purchase-order-required',
+          name: 'Purchase order requires number, supplier, date and at least one line',
+          category: 'required-field',
+          severity: 'error',
+          entityTypes: ['purchase_order'],
+          description: 'Stan Jay rejects purchase orders missing core fields or line items.',
+        },
+        (entity) => {
+          const order = entity as SaleInvoice;
+          const missing: string[] = [];
+          if (!nonEmptyString((entity as any).purchaseOrderNumber)) missing.push('purchaseOrderNumber');
+          if (!nonEmptyString(order.supplierId)) missing.push('supplierId');
+          if (!nonEmptyString(order.date)) missing.push('date');
+          if (!Array.isArray(order.items) || order.items.length === 0) missing.push('items');
+          return {
+            ok: missing.length === 0,
+            explanation: missing.length ? `Missing required fields: ${missing.join(', ')}` : 'All required fields present',
+          };
+        },
+      ),
+      perEntityRule(
+        {
+          id: 'sj-credit-note-required',
+          name: 'Credit note requires number, customer, date and at least one line',
+          category: 'required-field',
+          severity: 'error',
+          entityTypes: ['credit_note'],
+          description: 'Stan Jay rejects credit notes missing core fields or line items.',
+        },
+        (entity) => {
+          const creditNote = entity as SaleInvoice;
+          const missing: string[] = [];
+          if (!nonEmptyString((entity as any).creditNoteNumber)) missing.push('creditNoteNumber');
+          if (!nonEmptyString(creditNote.customerId)) missing.push('customerId');
+          if (!nonEmptyString(creditNote.date)) missing.push('date');
+          if (!Array.isArray(creditNote.items) || creditNote.items.length === 0) missing.push('items');
+          return {
+            ok: missing.length === 0,
+            explanation: missing.length ? `Missing required fields: ${missing.join(', ')}` : 'All required fields present',
           };
         },
       ),

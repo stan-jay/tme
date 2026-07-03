@@ -9,7 +9,7 @@ import type {
   WriteRequest,
   WriteResult,
 } from '@tme/connector-sdk';
-import type { Customer, Payment, Product, SaleInvoice, SJBLEntity } from '@tme/shared';
+import type { Customer, CreditNote, Payment, Product, PurchaseOrder, SJBLEntity, Supplier } from '@tme/shared';
 
 /**
  * Stan Jay business-system plugin.
@@ -26,7 +26,15 @@ export class StanJayConnectorService implements BusinessSystemPlugin, Destinatio
     version: '0.1.0',
     category: 'erp',
     capabilities: ['write'],
-    supportedEntityTypes: ['customer', 'product', 'sale_invoice', 'payment'],
+    supportedEntityTypes: [
+      'customer',
+      'supplier',
+      'product',
+      'sale_invoice',
+      'purchase_order',
+      'payment',
+      'credit_note',
+    ],
     configurationSchema: [
       { key: 'apiUrl', label: 'API URL', type: 'url', required: true },
       { key: 'apiKey', label: 'API key', type: 'secret', required: true, secret: true },
@@ -102,12 +110,18 @@ export class StanJayConnectorService implements BusinessSystemPlugin, Destinatio
     switch (entity.type) {
       case 'customer':
         return this.post('customers', this.customerPayload(entity as Customer), idempotencyKey, context);
+      case 'supplier':
+        return this.post('suppliers', this.supplierPayload(entity as Supplier), idempotencyKey, context);
       case 'product':
         return this.post('products', this.productPayload(entity as Product), idempotencyKey, context);
       case 'sale_invoice':
         return this.post('invoices', this.invoicePayload(entity as SaleInvoice), idempotencyKey, context);
+      case 'purchase_order':
+        return this.post('purchase-orders', this.purchaseOrderPayload(entity as PurchaseOrder), idempotencyKey, context);
       case 'payment':
         return this.post('payments', this.paymentPayload(entity as Payment), idempotencyKey, context);
+      case 'credit_note':
+        return this.post('credit-notes', this.creditNotePayload(entity as CreditNote), idempotencyKey, context);
       default:
         throw new Error(`Stan Jay writer does not support ${entity.type}`);
     }
@@ -177,6 +191,43 @@ export class StanJayConnectorService implements BusinessSystemPlugin, Destinatio
       tax: invoice.tax,
       total: invoice.total,
       status: invoice.status,
+    };
+  }
+
+  private purchaseOrderPayload(order: PurchaseOrder) {
+    return {
+      purchaseOrderNumber: order.purchaseOrderNumber ?? order.invoiceNumber,
+      supplierId: order.supplierId,
+      date: order.date,
+      items: order.items,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      total: order.total,
+      status: order.status,
+    };
+  }
+
+  private creditNotePayload(creditNote: CreditNote) {
+    return {
+      creditNoteNumber: creditNote.creditNoteNumber ?? creditNote.invoiceNumber,
+      customerId: creditNote.customerId,
+      date: creditNote.date,
+      items: creditNote.items,
+      subtotal: creditNote.subtotal,
+      tax: creditNote.tax,
+      total: creditNote.total,
+      reason: creditNote.reason,
+      status: creditNote.status,
+    };
+  }
+
+  private supplierPayload(supplier: Supplier) {
+    return {
+      name: supplier.name,
+      email: supplier.email,
+      phone: supplier.phone,
+      address: supplier.billingAddress,
+      taxId: supplier.taxId,
     };
   }
 
