@@ -12,7 +12,7 @@
     "setup:db": "npm --workspace @tme/backend run prisma:push",
     "prisma": "npm --workspace @tme/backend exec -- prisma",
     "build": "npm --workspace @tme/backend run build && npm --workspace @tme/frontend run build",
-    "test:backend": "npm --workspace @tme/backend run test",
+    "test:backend": "npm --workspace @tme/backend run test --",
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
     "typecheck:backend": "tsc -p apps/backend/tsconfig.json --noEmit",
     "typecheck:frontend": "tsc -p apps/frontend/tsconfig.json --noEmit",

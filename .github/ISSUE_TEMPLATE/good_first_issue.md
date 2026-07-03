@@ -14,6 +14,16 @@ Describe the task clearly.
 
 Explain why this task is useful to the project.
 
+## Suggested area
+
+- Documentation
+- Frontend UI polish
+- Backend tests
+- Knowledge-pack rules
+- Connector metadata
+- Developer tooling
+- Other
+
 ## What needs to be done
 
 - [ ] 
@@ -27,6 +37,10 @@ Mention the files, folders, or modules related to this task.
 ## Expected outcome
 
 Describe what should be completed when the issue is done.
+
+## Validation
+
+Describe the command, screenshot, or manual check that should prove the task is complete.
 
 ## Help
 

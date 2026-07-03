@@ -10,6 +10,16 @@ assignees: ""
 
 Which part of the documentation needs improvement?
 
+- README
+- Local setup
+- Backend API
+- Frontend workflow
+- Pipeline runtime
+- Connectors or integrations
+- Knowledge packs or SJBL
+- Contributor docs
+- Other
+
 ## Current problem
 
 What is missing, unclear, or outdated?
@@ -26,6 +36,7 @@ Mention any related files, such as:
 - CONTRIBUTING.md
 - docs/
 - API docs
+- GitHub templates
 
 ## Additional context
 
