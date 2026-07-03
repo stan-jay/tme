@@ -86,7 +86,9 @@ We recommend the following parent workspace layout:
 Projects/
 ├── setup/        # shared Docker services such as Postgres and Redis
 ├── tme/          # this repository
-└── Erp/          # optional ERP target project
+├── Erp/          # optional ERP target project
+└── stanjay-foundation/
+    └──           # internal company handbook, policies, templates, and onboarding
 ```
 
 Start the shared services from the setup workspace, then run the backend and frontend from this repository.
@@ -134,8 +136,12 @@ See [docs/architecture.md](docs/architecture.md) for architectural rules and [do
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, commit format, and onboarding steps.
+This is a private Stan Jay Solutions product repository. Developers must complete the company onboarding process before receiving access.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for repository-specific contribution rules. The internal `stanjay-foundation` repository is the source of truth for the company handbook, legal onboarding, engineering standards, access policy, and reusable project templates.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+TME is proprietary commercial software. Copyright (c) 2026 Stan Jay Solutions. All rights reserved.
+
+See [LICENSE](LICENSE) for details.

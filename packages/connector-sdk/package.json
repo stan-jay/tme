@@ -2,6 +2,7 @@
   "name": "@tme/connector-sdk",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "description": "Capability SDK for business-system plugins that translate to and from SJBL",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

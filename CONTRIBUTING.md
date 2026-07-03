@@ -1,103 +1,110 @@
 # Contributing to Transaction Migration Engine
 
-Thank you for your interest in contributing to Transaction Migration Engine (TME).
+Transaction Migration Engine (TME) is a private Stan Jay Solutions product repository.
 
-TME is an AI-assisted data migration platform for accounting, ERP, POS, and e-commerce systems. The project is growing, so contributions are welcome in code, documentation, tests, issue reporting, and architecture discussions.
+Contributions are accepted only from authorized Stan Jay Solutions team members, contractors, and approved collaborators who have completed the required onboarding and access process.
 
-## Project goal
+## Before You Contribute
 
-Help businesses migrate records between systems such as:
+Before accessing or contributing to this repository, each developer must complete the company onboarding process maintained in the internal `stanjay-foundation` repository.
 
-- CSV and Excel
-- WooCommerce
-- Shopify
-- Odoo
-- QuickBooks Online
-- Sage Accounting
-- Xero
-- Zoho Books
-- ERPNext
-- Custom ERP systems
+That process should include:
 
-The platform focuses on clean data import, field mapping, validation, migration history, audit logs, and safe data transfer.
+- Employment, contractor, or collaborator approval
+- Confidentiality obligations
+- Intellectual-property assignment terms where applicable
+- GitHub access approval
+- Security and secrets-handling expectations
+- Development environment setup
 
-## How to contribute
+This repository does not duplicate the full company handbook. The internal `stanjay-foundation` repository is the source of truth for company-wide policies, legal onboarding, engineering standards, reusable templates, and developer progression.
 
-You can contribute by:
+## Repository Scope
 
-- Fixing bugs
-- Improving documentation
-- Creating tests
-- Improving validation rules
-- Building import/export connectors
-- Improving the frontend dashboard
-- Improving backend APIs
-- Helping with architecture discussions
+Use this repository for TME-specific work:
 
-## Getting started
+- Backend API and pipeline runtime
+- Frontend administration experience
+- SJBL compatibility and mapping behavior
+- Knowledge-pack execution
+- Connector and integration behavior
+- Migration workflow and audit behavior
+- TME-specific documentation and tests
 
-1. Fork the repository.
-2. Clone your fork:
+Company-wide standards, legal templates, onboarding checklists, and reusable project templates belong in `stanjay-foundation`.
 
-```bash
-git clone git@github.com:YOUR_USERNAME/tme.git
-cd tme
+## Development Workflow
+
+1. Pull the latest `main`.
+2. Create a focused branch.
+3. Keep changes small enough to review clearly.
+4. Add or update tests when behavior changes.
+5. Open a pull request using the repository template.
+6. Wait for CI and review before merging.
+
+Recommended branch names:
+
+```text
+feat/short-description
+fix/short-description
+docs/short-description
+chore/short-description
 ```
 
-3. Create a new branch:
+## Commit Messages
 
-```bash
-git checkout -b feature/your-feature-name
-```
+Use clear conventional-style commit messages.
 
-4. Install dependencies. For the backend:
+Good examples:
 
-```bash
-cd backend
-npm install
-```
-
-For the frontend:
-
-```bash
-cd frontend
-npm install
-```
-
-5. Copy example environment files if present:
-
-```bash
-cp .env.example .env
-```
-
-6. Start development servers as documented in the repository README.
-
-## Commit message style
-
-Use clear commit messages. Good examples:
-
-```
-feat: add CSV upload endpoint
+```text
+feat: add integration connection test state
 fix: correct invoice validation rule
-docs: update setup instructions
-refactor: improve migration job service
-test: add product import validation tests
+docs: update backend setup instructions
+refactor: simplify pipeline stage handler
+test: add knowledge-pack decision coverage
+chore: update contributor workflow guardrails
 ```
 
-## Pull request process
+## Quality Gates
 
-Before opening a pull request:
+Run the relevant checks before opening a pull request.
 
-1. Make sure your code runs locally.
-2. Check that you did not commit sensitive files.
-3. Make sure your changes are focused.
-4. Add a clear pull request description.
-5. Link the issue you are solving if applicable.
+```bash
+npm run typecheck
+npm run test:backend -- --runInBand
+npm run build --workspace @tme/backend
+npm run build --workspace @tme/frontend
+```
 
-## Code of conduct
+CI runs these checks for pull requests and pushes to `main`.
 
-Be respectful and constructive. We welcome people who are learning and building in good faith.
+## Security and Data Rules
 
-## License
+Do not commit:
 
-By contributing to this project, you agree that your contributions may be included under the license used by this repository.
+- `.env` files
+- API keys
+- Customer data
+- Private business records
+- Production database dumps
+- Access tokens
+- Credentials
+
+Use sanitized sample data in tests and documentation.
+
+## Architecture Rules
+
+- Keep vendor-specific behavior in connectors, plugins, or knowledge packs.
+- Keep platform code vendor-neutral where possible.
+- Preserve tenant isolation, RBAC, audit logging, and idempotency guarantees.
+- Keep SJBL compatibility in mind when changing canonical data structures.
+- Document database, migration, or pipeline compatibility impacts in the pull request.
+
+## License and Ownership
+
+TME is proprietary commercial software owned by Stan Jay Solutions.
+
+By contributing, you confirm that your contribution is authorized under the applicable Stan Jay Solutions employment, contractor, collaborator, confidentiality, and intellectual-property terms.
+
+See [LICENSE](LICENSE) for repository license terms.

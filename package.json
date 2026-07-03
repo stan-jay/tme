@@ -1,6 +1,7 @@
 {
   "name": "tme",
   "private": true,
+  "license": "UNLICENSED",
   "workspaces": [
     "apps/*",
     "packages/*"

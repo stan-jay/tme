@@ -2,6 +2,7 @@
   "name": "@tme/frontend",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

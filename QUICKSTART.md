@@ -1,159 +1,154 @@
-# Quick Start Guide
+# TME Quickstart
+
+This quickstart is for authorized Stan Jay Solutions developers working in the private TME repository.
+
+Complete the company onboarding process in the internal `stanjay-foundation` repository before using this guide.
 
 ## Prerequisites
 
-- Node.js 18+
-- Python 3.9+
+- Node.js 20+
+- npm
 - PostgreSQL 14+
-- Redis 6+
+- Redis 6+ when using the Redis queue driver
+- Access to the internal shared services setup, if using the standard local workspace
+
+## Recommended Workspace
+
+```text
+Projects/
+├── setup/                # shared local services
+├── tme/                  # this repository
+└── stanjay-foundation/   # internal handbook, policies, onboarding, and templates
+```
 
 ## Setup
 
-### 1. Install Dependencies
+Install dependencies from the repository root.
 
 ```bash
-# Install root dependencies
+cd /path/to/tme
 npm install
-
-# Prepare environments
-cd apps/backend
-cp .env.example .env
-cd ../../
-
-cd apps/frontend
-cp .env.example .env
-cd ../../
-
-cd apps/worker
-# Create Python virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cd ../../
 ```
 
-### 2. Database Setup
+Create local environment files.
 
 ```bash
-# Update .env with your DATABASE_URL
-# Then run migrations
-cd apps/backend
-npx prisma migrate dev --name init
-cd ../../
+cp apps/backend/.env.example apps/backend/.env
+cp apps/frontend/.env.example apps/frontend/.env
 ```
 
-### 3. Start Services
+Update `apps/backend/.env` with local values for:
 
-**Terminal 1 - Backend:**
-```bash
-cd apps/backend
-npm run start:dev
-# http://localhost:4000
+```text
+DATABASE_URL
+AUTH_JWT_SECRET
+BOOTSTRAP_ADMIN_EMAIL
+BOOTSTRAP_ADMIN_PASSWORD
+INTEGRATION_ENCRYPTION_KEY
+PIPELINE_QUEUE_DRIVER
 ```
 
-**Terminal 2 - Frontend:**
+Do not commit `.env` files or real credentials.
+
+## Database
+
+Apply the Prisma schema to the configured database.
+
 ```bash
-cd apps/frontend
-npm run dev
-# http://localhost:5173
+npm run setup:db
 ```
 
-**Terminal 3 - Worker:**
+## Start the Apps
+
+Backend:
+
 ```bash
-cd apps/worker
-# With venv activated:
-python app.py
-# http://localhost:5000
+npm run dev:backend
 ```
 
-## End-to-End Flow
+Frontend:
 
-### 1. Upload File
 ```bash
-curl -X POST http://localhost:4000/migration/upload \
-  -F "file=@invoice_data.xlsx"
+npm run dev:frontend
 ```
 
-### 2. Analyze
+Default local URLs:
+
+- Backend: `http://localhost:4000`
+- Frontend: `http://localhost:5173`
+
+On Windows, `npm run dev:backend` uses `scripts/start-backend.ps1` to build the backend and discover the authenticated Redis service inside Ubuntu WSL.
+
+## Smoke Test
+
+Authenticate with the bootstrap admin configured in `apps/backend/.env`.
+
 ```bash
-curl -X POST http://localhost:4000/migration/analyze \
+curl -X POST http://localhost:4000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"filePath": "uploads/invoice_data.xlsx", "sourceType": "excel"}'
+  -d '{
+    "organizationSlug": "stan-jay",
+    "email": "admin@example.com",
+    "password": "replace-with-a-strong-password"
+  }'
 ```
 
-### 3. Validate
+Use the returned `accessToken` for guarded endpoints.
+
 ```bash
-curl -X POST http://localhost:4000/migration/validate \
-  -H "Content-Type: application/json" \
-  -d '{"data": [...], "schema": {}}'
+curl http://localhost:4000/migration/health \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-### 4. Simulate
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "service": "migration"
+}
+```
+
+## Quality Gates
+
+Run these before opening a pull request.
+
 ```bash
-curl -X POST http://localhost:4000/migration/simulate \
-  -H "Content-Type: application/json" \
-  -d '{"data": [...], "mappings": {}}'
+npm run typecheck
+npm run test:backend -- --runInBand
+npm run build --workspace @tme/backend
+npm run build --workspace @tme/frontend
 ```
-
-### 5. Execute
-```bash
-curl -X POST http://localhost:4000/migration/execute \
-  -H "Content-Type: application/json" \
-  -d '{"data": [...], "mappings": {}, "destination": "stan_jay_erp"}'
-```
-
-## Environment Variables
-
-### Backend (.env)
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/tme
-REDIS_URL=redis://localhost:6379
-PORT=4000
-STAN_JAY_API_URL=http://localhost:3000/api
-STAN_JAY_API_KEY=your-api-key
-```
-
-### Frontend (.env)
-```
-VITE_API_URL=http://localhost:4000
-```
-
-## Testing
-
-### Sample Excel File
-Create `test-data.xlsx` with columns:
-- Customer Name
-- Invoice Number
-- Invoice Date
-- Product
-- Quantity
-- Unit Price
-- Total Amount
-
-Upload via the frontend UI at http://localhost:5173
 
 ## Troubleshooting
 
-**PostgreSQL connection error:**
-- Ensure PostgreSQL is running
-- Check DATABASE_URL format
-- Run `npx prisma db push` to create tables
+PostgreSQL connection errors:
 
-**Worker not responding:**
-- Check Python venv is activated
-- Verify port 5000 is available
-- Check worker logs for pandas/openpyxl errors
+- Confirm the database is running.
+- Check `DATABASE_URL` in `apps/backend/.env`.
+- Run `npm run setup:db`.
 
-**Frontend can't reach backend:**
-- Verify backend is running on port 4000
-- Check VITE_API_URL is correct
-- Check CORS settings in backend
+Authentication errors:
 
-## Next Steps
+- Confirm `AUTH_JWT_SECRET` is at least 32 characters.
+- Confirm bootstrap organization, email, and password values.
+- Restart the backend after environment changes.
 
-1. Implement file upload handler in backend
-2. Add database persistence
-3. Wire worker API calls for Excel parsing
-4. Implement Stan Jay ERP connector
-5. Add authentication layer
-6. Deploy to production
+Port conflicts:
+
+- Backend defaults to port `4000`.
+- Frontend defaults to port `5173`.
+- Stop stale local processes or change `PORT` / frontend config.
+
+Frontend cannot reach backend:
+
+- Confirm the backend is running.
+- Confirm `VITE_API_URL` in `apps/frontend/.env`.
+- Confirm `CORS_ORIGINS` in `apps/backend/.env`.
+
+## Internal References
+
+- Repository-specific contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Security baseline: [docs/P0-SECURITY-BASELINE.md](docs/P0-SECURITY-BASELINE.md)
+- Company-wide handbook and onboarding: internal `stanjay-foundation` repository
