@@ -1,33 +1,30 @@
 # Transaction Migration Engine
 
-Transaction Migration Engine (TME) is an AI-assisted data migration platform for moving business records between systems such as Excel, CSV, WooCommerce, QuickBooks, Sage, Odoo, ERPNext, Zoho Books, Shopify, and custom ERP systems.
+Transaction Migration Engine (TME) is a secure, API-first platform for moving business records between systems such as Excel, CSV, WooCommerce, QuickBooks, Sage, Odoo, ERPNext, Zoho Books, Shopify, and custom ERP platforms.
 
-The goal is to help businesses migrate customers, suppliers, products, invoices, purchases, payments, journals, inventory records, and opening balances with better validation, audit trails, and error reporting.
-
-TME is designed to handle real-world messy data and provide mappings, validation, and an auditable pipeline to import clean data into destination systems.
+The project centers on Stan Jay Business Language (SJBL), a canonical transaction format that lets TME validate, map, and import data through deterministic rules and auditable migration pipelines.
 
 ## What TME does
 
 - Imports data from CSV, Excel, APIs, and other business systems
-- Maps source fields to a universal migration format
+- Maps source fields into a universal migration format
 - Validates records before migration
 - Detects duplicates and missing required fields
 - Tracks migration jobs and migration history
-- Provides audit logs for every imported record
-- Supports background processing for large migration jobs
-- Prepares clean data for ERP, accounting, POS, and e-commerce systems
+- Produces audit logs for imported records
+- Supports background processing with Redis and BullMQ
+- Prepares clean data for ERP, accounting, POS, and commerce destinations
 
 ## Current focus
 
-This project is currently focused on:
+This repository is currently focused on:
 
-- CSV and Excel import
-- Universal transaction format
-- Validation rules
-- Migration job tracking
-- Background processing with Redis/BullMQ
-- API-first architecture
-- Developer-friendly documentation
+- CSV and Excel import workflows
+- Universal transaction format and SJBL compatibility
+- Validation and knowledge-pack rules
+- Migration job tracking and pipeline orchestration
+- Background processing and observability
+- Developer-friendly documentation and contributor workflows
 
 ## Local development workspace
 
@@ -40,7 +37,20 @@ Projects/
 └── Erp/          # optional ERP target project
 ```
 
-Start shared services from the `setup/` repository, then run the TME services from the `tme/` folder.
+Start the shared services from the setup workspace, then run the backend and frontend from this repository.
+
+### Backend and frontend
+
+```bash
+cd /path/to/tme
+npm install
+npm run setup:db
+npm run dev:backend
+npm run dev:frontend
+```
+
+- Backend: http://localhost:4000
+- Frontend: http://localhost:5173
 
 ## Contributing
 
@@ -48,16 +58,15 @@ See CONTRIBUTING.md for contribution guidelines, commit format, and onboarding s
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+---
+
 # Stan Jay Business Language Platform
 
-TME is a secure business-data pipeline platform centered on **SJBL — Stan Jay
-Business Language**.
+TME is a secure business-data pipeline platform centered on SJBL — Stan Jay Business Language.
 
-External systems speak different business languages. TME translates those
-languages into a canonical, versioned representation of entities,
-relationships and rules. Migration is the first operation built on that
-foundation.
+External systems speak different business languages. TME translates those languages into a canonical, versioned representation of entities, relationships, and rules. Migration is the first operation built on that foundation.
 
 ```text
 Business system or file

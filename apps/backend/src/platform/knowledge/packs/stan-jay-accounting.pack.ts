@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { KnowledgePackManifest, LineItem, Payment, Product, SaleInvoice } from '@tme/shared';
+import type { KnowledgePackManifest, LineItem, Payment, Product, SaleInvoice, CreditNote, PurchaseOrder, Supplier } from '@tme/shared';
 import {
   approxEqual,
   asRecord,
@@ -70,30 +70,30 @@ export class StanJayAccountingPack extends BaseKnowledgePack {
         (entity) => {
           const price = num((entity as Product).unitPrice);
           return {
-            perEntityRule(
-              {
-                id: 'sj-debit-note-required',
-                name: 'Debit note requires number, supplier, date and at least one line',
-                category: 'required-field',
-                severity: 'error',
-                entityTypes: ['debit_note'],
-                description: 'Stan Jay rejects debit notes missing core fields or line items.',
-              },
-              (entity) => {
-                const note = entity as SaleInvoice;
-                const missing: string[] = [];
-                if (!nonEmptyString((entity as any).debitNoteNumber)) missing.push('debitNoteNumber');
-                if (!nonEmptyString((note as any).supplierId)) missing.push('supplierId');
-                if (!nonEmptyString(note.date)) missing.push('date');
-                if (!Array.isArray(note.items) || note.items.length === 0) missing.push('items');
-                return {
-                  ok: missing.length === 0,
-                  explanation: missing.length ? `Missing required fields: ${missing.join(', ')}` : 'All required fields present',
-                };
-              },
-            ),
             ok: price !== null && price >= 0,
             explanation: `Unit price is ${(entity as Product).unitPrice}`,
+          };
+        },
+      ),
+      perEntityRule(
+        {
+          id: 'sj-debit-note-required',
+          name: 'Debit note requires number, supplier, date and at least one line',
+          category: 'required-field',
+          severity: 'error',
+          entityTypes: ['debit_note'],
+          description: 'Stan Jay rejects debit notes missing core fields or line items.',
+        },
+        (entity) => {
+          const note = entity as PurchaseOrder | CreditNote | SaleInvoice;
+          const missing: string[] = [];
+          if (!nonEmptyString((entity as any).debitNoteNumber)) missing.push('debitNoteNumber');
+          if (!nonEmptyString((note as any).supplierId)) missing.push('supplierId');
+          if (!nonEmptyString((note as any).date)) missing.push('date');
+          if (!Array.isArray((note as any).items) || (note as any).items.length === 0) missing.push('items');
+          return {
+            ok: missing.length === 0,
+            explanation: missing.length ? `Missing required fields: ${missing.join(', ')}` : 'All required fields present',
           };
         },
       ),
@@ -107,9 +107,9 @@ export class StanJayAccountingPack extends BaseKnowledgePack {
           description: 'Stan Jay rejects purchase orders missing core fields or line items.',
         },
         (entity) => {
-          const order = entity as SaleInvoice;
+          const order = entity as PurchaseOrder;
           const missing: string[] = [];
-          if (!nonEmptyString((entity as any).purchaseOrderNumber)) missing.push('purchaseOrderNumber');
+          if (!nonEmptyString(order.purchaseOrderNumber)) missing.push('purchaseOrderNumber');
           if (!nonEmptyString(order.supplierId)) missing.push('supplierId');
           if (!nonEmptyString(order.date)) missing.push('date');
           if (!Array.isArray(order.items) || order.items.length === 0) missing.push('items');
@@ -129,9 +129,9 @@ export class StanJayAccountingPack extends BaseKnowledgePack {
           description: 'Stan Jay rejects credit notes missing core fields or line items.',
         },
         (entity) => {
-          const creditNote = entity as SaleInvoice;
+          const creditNote = entity as CreditNote;
           const missing: string[] = [];
-          if (!nonEmptyString((entity as any).creditNoteNumber)) missing.push('creditNoteNumber');
+          if (!nonEmptyString(creditNote.creditNoteNumber)) missing.push('creditNoteNumber');
           if (!nonEmptyString(creditNote.customerId)) missing.push('customerId');
           if (!nonEmptyString(creditNote.date)) missing.push('date');
           if (!Array.isArray(creditNote.items) || creditNote.items.length === 0) missing.push('items');

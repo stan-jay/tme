@@ -9,7 +9,7 @@ import type {
   WriteRequest,
   WriteResult,
 } from '@tme/connector-sdk';
-import type { Customer, CreditNote, Payment, Product, PurchaseOrder, SJBLEntity, Supplier } from '@tme/shared';
+import type { Customer, CreditNote, DebitNote, Payment, Product, PurchaseOrder, SaleInvoice, SJBLEntity, Supplier } from '@tme/shared';
 
 /**
  * Stan Jay business-system plugin.
@@ -196,7 +196,7 @@ export class StanJayConnectorService implements BusinessSystemPlugin, Destinatio
 
   private purchaseOrderPayload(order: PurchaseOrder) {
     return {
-      purchaseOrderNumber: order.purchaseOrderNumber ?? order.invoiceNumber,
+      purchaseOrderNumber: order.purchaseOrderNumber,
       supplierId: order.supplierId,
       date: order.date,
       items: order.items,
@@ -209,7 +209,7 @@ export class StanJayConnectorService implements BusinessSystemPlugin, Destinatio
 
   private creditNotePayload(creditNote: CreditNote) {
     return {
-      creditNoteNumber: creditNote.creditNoteNumber ?? creditNote.invoiceNumber,
+      creditNoteNumber: creditNote.creditNoteNumber,
       customerId: creditNote.customerId,
       date: creditNote.date,
       items: creditNote.items,
