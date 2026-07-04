@@ -22,6 +22,16 @@ export function MigrationHistoryScreen({ token }: { token: string }) {
   if (query.isPending) return <p className="callout">Loading migration history...</p>;
   if (query.isError) return <p className="callout danger">{query.error.message}</p>;
 
+  const totals = query.data.reduce(
+    (current, migration) => ({
+      rows: current.rows + migration.totalRows,
+      success: current.success + migration.successRows,
+      failed: current.failed + migration.failedRows,
+      completed: current.completed + (migration.status.includes('COMPLETED') ? 1 : 0),
+    }),
+    { rows: 0, success: 0, failed: 0, completed: 0 },
+  );
+
   return (
     <main className="page wide">
       <header className="page-header">
@@ -32,6 +42,15 @@ export function MigrationHistoryScreen({ token }: { token: string }) {
         </div>
         <span className="badge">{query.data.length} records</span>
       </header>
+      <div className="grid four" style={{ marginBottom: 16 }}>
+        <div className="metric-card"><div className="metric-label">Migrations</div><p className="metric-value">{query.data.length}</p></div>
+        <div className="metric-card"><div className="metric-label">Rows processed</div><p className="metric-value">{totals.rows}</p></div>
+        <div className="metric-card"><div className="metric-label">Successful rows</div><p className="metric-value">{totals.success}</p></div>
+        <div className="metric-card"><div className="metric-label">Failed rows</div><p className="metric-value">{totals.failed}</p></div>
+      </div>
+      {!query.data.length && (
+        <p className="callout">No migration history yet. Upload and analyze a spreadsheet or scan to create the first migration record.</p>
+      )}
       <div className="table-card">
       <table>
         <thead>

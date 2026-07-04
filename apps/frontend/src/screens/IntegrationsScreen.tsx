@@ -85,6 +85,12 @@ export function IntegrationsScreen({ token }: { token: string }) {
   });
 
   const selectedPlugin = catalog.data?.find((plugin) => plugin.id === selectedPluginId);
+  const loading = catalog.isPending || connections.isPending;
+  const loadError = catalog.error || connections.error;
+  const enabledPlugins = (catalog.data || []).filter((plugin) => plugin.globalEnabled).length;
+  const writerConnections = (connections.data || []).filter((connection) =>
+    connection.plugin.manifest.capabilities.includes('write'),
+  ).length;
 
   return (
     <main className="page wide">
@@ -97,7 +103,31 @@ export function IntegrationsScreen({ token }: { token: string }) {
         <span className="badge success">Secrets encrypted</span>
       </header>
 
+      <div className="grid four" style={{ marginBottom: 16 }}>
+        <div className="metric-card"><div className="metric-label">Plugins</div><p className="metric-value">{catalog.data?.length || 0}</p></div>
+        <div className="metric-card"><div className="metric-label">Enabled</div><p className="metric-value">{enabledPlugins}</p></div>
+        <div className="metric-card"><div className="metric-label">Connections</div><p className="metric-value">{connections.data?.length || 0}</p></div>
+        <div className="metric-card"><div className="metric-label">Writers</div><p className="metric-value">{writerConnections}</p></div>
+      </div>
+
+      <section className="card" style={{ marginBottom: 20 }}>
+        <div className="card-body">
+          <p className="eyebrow">Connector SDK</p>
+          <h2 style={{ marginTop: 0 }}>Capability-based integrations</h2>
+          <p className="page-copy">
+            Connectors advertise reader, writer, mapper, validator, watcher and rollback capabilities.
+            The UI should approve plugin manifests, store encrypted connection settings, test access,
+            and expose only compatible destinations to migration and pipeline workflows.
+          </p>
+        </div>
+      </section>
+
       <h2>Plugin catalogue</h2>
+      {loading && <p className="callout">Loading plugins and organization connections…</p>}
+      {loadError && <p className="callout danger">{loadError.message}</p>}
+      {catalog.isSuccess && catalog.data.length === 0 && (
+        <p className="callout warning">No plugins are registered yet. Add connector manifests in the backend plugin registry before creating connections.</p>
+      )}
       <div className="grid three">
         {(catalog.data || []).map((plugin) => (
           <article key={plugin.id} className="card">
@@ -135,6 +165,9 @@ export function IntegrationsScreen({ token }: { token: string }) {
       </div>
 
       <h2 style={{ marginTop: 32 }}>Organization connections</h2>
+      {connections.isSuccess && connections.data.length === 0 && (
+        <p className="callout">No organization connections yet. Approve a plugin, create a connection, test it, then enable it for pipeline and import destinations.</p>
+      )}
       <label>
         Add connection
         <select value={selectedPluginId} onChange={(event) => setSelectedPluginId(event.target.value)}>

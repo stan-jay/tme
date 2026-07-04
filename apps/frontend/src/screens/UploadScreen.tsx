@@ -35,6 +35,15 @@ interface ScanAnalysis {
 }
 
 type UserRole = 'ADMIN' | 'REVIEWER' | 'EXECUTOR' | 'UPLOADER';
+type UploadResult = Analysis | ScanAnalysis;
+
+interface BatchItem {
+  id: string;
+  name: string;
+  size: number;
+  status: 'queued' | 'processing' | 'analyzed' | 'failed';
+  message: string;
+}
 
 export function UploadScreen({ token, role }: { token: string; role: UserRole }) {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -48,6 +57,7 @@ export function UploadScreen({ token, role }: { token: string; role: UserRole })
     validation?: { healthScore: number; readyToImport: boolean; issues: Array<{ type: string; message: string }> };
     simulation?: { estimatedSuccess: number } | null;
   } | null>(null);
+  const [batch, setBatch] = useState<BatchItem[]>([]);
   const connections = useQuery({
     queryKey: ['available-integrations', token],
     queryFn: () => apiFetch<Array<{
@@ -73,7 +83,7 @@ export function UploadScreen({ token, role }: { token: string; role: UserRole })
   const canImport = role === 'ADMIN' || role === 'EXECUTOR';
 
   const upload = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (file: File): Promise<UploadResult> => {
       const form = new FormData();
       form.append('file', file);
       const stored = await apiFetch<{ uploadId: string }>('/migration/upload', token, {
@@ -110,6 +120,48 @@ export function UploadScreen({ token, role }: { token: string; role: UserRole })
       setScanMigration(null);
     },
   });
+
+  async function processFiles(files: FileList | null) {
+    const selected = Array.from(files || []);
+    if (!selected.length) return;
+    const nextBatch = selected.map((file) => ({
+      id: `${file.name}-${file.size}-${file.lastModified}`,
+      name: file.name,
+      size: file.size,
+      status: 'queued' as const,
+      message: 'Waiting for upload',
+    }));
+    setBatch(nextBatch);
+
+    for (const file of selected) {
+      const id = `${file.name}-${file.size}-${file.lastModified}`;
+      setBatch((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, status: 'processing', message: 'Uploading and analyzing' } : item,
+        ),
+      );
+      try {
+        const result = await upload.mutateAsync(file);
+        const message =
+          'extractionMode' in result
+            ? `${result.sourceKind.toUpperCase()} extraction · ${Math.round(result.confidence * 100)}% confidence`
+            : `${result.rows} rows · ${result.columns.length} columns`;
+        setBatch((current) =>
+          current.map((item) =>
+            item.id === id ? { ...item, status: 'analyzed', message } : item,
+          ),
+        );
+      } catch (caught) {
+        setBatch((current) =>
+          current.map((item) =>
+            item.id === id
+              ? { ...item, status: 'failed', message: caught instanceof Error ? caught.message : 'Upload failed' }
+              : item,
+          ),
+        );
+      }
+    }
+  }
 
   const acceptScanDraft = useMutation({
     mutationFn: () =>
@@ -205,23 +257,45 @@ export function UploadScreen({ token, role }: { token: string; role: UserRole })
           <div className="dropzone">
             <div className="dropzone-icon">↑</div>
             <div>
-              <h2 style={{ margin: 0 }}>Choose file</h2>
-              <p className="muted">Supported: .xlsx, .xls, .csv, .pdf, .png, .jpg, .jpeg, .tif, .tiff</p>
+              <h2 style={{ margin: 0 }}>Choose one or more files</h2>
+              <p className="muted">Each file becomes its own governed migration. Supported: .xlsx, .xls, .csv, .pdf, .png, .jpg, .jpeg, .tif, .tiff</p>
             </div>
             <input
               className="file-input"
               type="file"
+              multiple
               accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.tif,.tiff"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) upload.mutate(file);
-              }}
+              onChange={(event) => void processFiles(event.target.files)}
             />
           </div>
         </div>
       </section>
-      {upload.isPending && <p>Uploading and analyzing…</p>}
+      {upload.isPending && <p className="callout">Uploading and analyzing…</p>}
       {error && <p className="callout danger">{error instanceof Error ? error.message : 'Request failed'}</p>}
+
+      {batch.length > 0 && (
+        <section className="card" style={{ marginTop: '1rem' }}>
+          <div className="card-body">
+            <p className="eyebrow">Batch</p>
+            <h2 style={{ marginTop: 0 }}>Upload queue</h2>
+            <div className="table-card">
+              <table>
+                <thead><tr><th>File</th><th>Size</th><th>Status</th><th>Result</th></tr></thead>
+                <tbody>
+                  {batch.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td>{formatBytes(item.size)}</td>
+                      <td><span className={`badge ${badgeForBatchStatus(item.status)}`}>{item.status}</span></td>
+                      <td>{item.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
 
       {scanAnalysis && (
         <section className="card" style={{ marginTop: '1rem' }}>
@@ -401,4 +475,17 @@ export function UploadScreen({ token, role }: { token: string; role: UserRole })
       )}
     </main>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function badgeForBatchStatus(status: BatchItem['status']): string {
+  if (status === 'analyzed') return 'success';
+  if (status === 'failed') return 'danger';
+  if (status === 'processing') return 'warning';
+  return '';
 }

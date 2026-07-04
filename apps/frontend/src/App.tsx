@@ -105,7 +105,10 @@ function App() {
             <div>
               <div className="breadcrumb">Stan Jay · {navItems.find((item) => item.screen === safeScreen)?.label}</div>
             </div>
-            <span className="badge success">Secure session</span>
+            <div className="button-row">
+              <span className="badge">API {API_URL}</span>
+              <span className="badge success">Secure session</span>
+            </div>
           </div>
           <div className="content-frame">
             {safeScreen === 'upload' && <UploadScreen token={token} role={effectiveUser?.role ?? 'UPLOADER'} />}
@@ -121,7 +124,7 @@ function App() {
 }
 
 function LoginScreen({ onLogin }: { onLogin: (session: LoginResponse) => void }) {
-  const [email, setEmail] = useState('admin@tme.local');
+  const [email, setEmail] = useState('admin@example.com');
   const [organizationSlug, setOrganizationSlug] = useState('stan-jay');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

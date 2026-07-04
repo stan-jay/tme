@@ -105,6 +105,8 @@ export function PipelinesScreen({ token }: { token: string }) {
   });
 
   const error = [createTemplate.error, activate.error, start.error, cancel.error].find(Boolean);
+  const loadError = definitions.error || connections.error || runs.error;
+  const loading = definitions.isPending || connections.isPending || runs.isPending;
   const readers = (connections.data || []).filter((connection) => connection.capabilities.includes('read'));
   const writers = (connections.data || []).filter((connection) => connection.capabilities.includes('write'));
 
@@ -147,8 +149,16 @@ export function PipelinesScreen({ token }: { token: string }) {
         <button className="btn primary" disabled={createTemplate.isPending}>Create pipeline template</button>
       </form>
       {error && <p className="callout danger">{error instanceof Error ? error.message : 'Pipeline request failed'}</p>}
+      {loading && <p className="callout">Loading pipeline definitions, connections and runs…</p>}
+      {loadError && <p className="callout danger">{loadError.message}</p>}
+      {connections.isSuccess && !writers.length && (
+        <p className="callout warning">No enabled writer connection is available. Create and test a destination connection under Integrations before running imports.</p>
+      )}
 
       <h2>Definitions</h2>
+      {definitions.isSuccess && definitions.data.length === 0 && (
+        <p className="callout">No pipeline definitions yet. Create the standard migration template above, then activate it.</p>
+      )}
       <div className="grid">
         {(definitions.data || []).map((definition) => (
           <article key={definition.id} className="card">
@@ -170,6 +180,9 @@ export function PipelinesScreen({ token }: { token: string }) {
       </div>
 
       <h2 style={{ marginTop: 32 }}>Runs</h2>
+      {runs.isSuccess && runs.data.length === 0 && (
+        <p className="callout">No pipeline runs yet. Runs will appear here with stage progress, retries and failures.</p>
+      )}
       <div className="grid">
         {(runs.data || []).map((run) => (
           <article key={run.id} className="card">
