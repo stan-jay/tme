@@ -179,7 +179,7 @@ pre { white-space: pre-wrap; word-break: break-word; }
 .nav-button {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.45rem;
   padding: 0.48rem 0.55rem;
   border-radius: 8px;
@@ -193,7 +193,33 @@ pre { white-space: pre-wrap; word-break: break-word; }
 
 .nav-button:hover { background: #f1f5f9; }
 .nav-button.active { color: var(--primary); background: var(--primary-soft); }
-.nav-icon { width: 1rem; height: 1rem; display: grid; place-items: center; }
+.nav-icon {
+  width: 1rem;
+  height: 1rem;
+  display: grid;
+  place-items: center;
+  margin-top: 0.08rem;
+  flex: 0 0 1rem;
+}
+
+.nav-text {
+  min-width: 0;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.nav-label {
+  line-height: 1.15;
+}
+
+.nav-description {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.nav-button.active .nav-description { color: #41698d; }
 
 .sidebar-footer {
   position: absolute;
@@ -500,6 +526,42 @@ pre { white-space: pre-wrap; word-break: break-word; }
   display: block;
   color: var(--muted);
   font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.menu-guide-card {
+  display: grid;
+  gap: 0.38rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fbfdff;
+}
+
+.menu-guide-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.menu-guide-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.menu-guide-card strong {
+  margin-top: 0.2rem;
+  color: #334155;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.menu-guide-card span {
+  color: #334155;
+  font-size: 0.82rem;
   line-height: 1.45;
 }
 

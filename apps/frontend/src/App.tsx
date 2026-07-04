@@ -13,6 +13,12 @@ const queryClient = new QueryClient();
 type UserRole = 'ADMIN' | 'REVIEWER' | 'EXECUTOR' | 'UPLOADER';
 type Screen = 'overview' | 'upload' | 'worklist' | 'history' | 'integrations' | 'pipelines';
 
+interface NavItem {
+  screen: Screen;
+  label: string;
+  description: string;
+}
+
 interface SessionUser {
   id: string;
   email: string;
@@ -115,7 +121,10 @@ function App() {
                 }}
               >
                 <span className="nav-icon">{iconFor(item.screen)}</span>
-                <span>{item.label}</span>
+                <span className="nav-text">
+                  <span className="nav-label">{item.label}</span>
+                  <span className="nav-description">{item.description}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -232,20 +241,46 @@ function LoginScreen({ onLogin, sessionMessage }: { onLogin: (session: LoginResp
   );
 }
 
-function navigationFor(role: UserRole): Array<{ screen: Screen; label: string }> {
-  const base: Array<{ screen: Screen; label: string }> = [{ screen: 'overview', label: 'Overview' }];
+function navigationFor(role: UserRole): NavItem[] {
+  const base: NavItem[] = [
+    {
+      screen: 'overview',
+      label: 'Overview',
+      description: 'Control room and health',
+    },
+  ];
   if (role === 'ADMIN' || role === 'UPLOADER') {
-    base.push({ screen: 'upload', label: 'Upload New' });
+    base.push({
+      screen: 'upload',
+      label: 'Upload New',
+      description: 'Add files for analysis',
+    });
   }
   if (role === 'ADMIN' || role === 'REVIEWER' || role === 'EXECUTOR') {
-    base.push({ screen: 'worklist', label: 'Worklist' });
+    base.push({
+      screen: 'worklist',
+      label: 'Worklist',
+      description: 'Review and execute queue',
+    });
   }
-  base.push({ screen: 'history', label: 'History' });
+  base.push({
+    screen: 'history',
+    label: 'History',
+    description: 'Audit trail and outcomes',
+  });
   if (role === 'ADMIN') {
     return [
       ...base,
-      { screen: 'integrations', label: 'Integrations' },
-      { screen: 'pipelines', label: 'Pipelines' },
+      {
+        screen: 'integrations',
+        label: 'Integrations',
+        description: 'Plugins and connections',
+      },
+      {
+        screen: 'pipelines',
+        label: 'Pipelines',
+        description: 'Templates, runs, stages',
+      },
     ];
   }
   return base;

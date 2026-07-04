@@ -55,6 +55,7 @@ export function DashboardScreen({ token, role }: { token: string; role: UserRole
   const pendingExecution = (worklist.data || []).filter((item) => item.gate === 'execute').length;
   const writerCount = (connections.data || []).filter((connection) => connection.capabilities.includes('write')).length;
   const hasConnectionError = health.error || migrations.error || worklist.error || connections.error;
+  const menuGuide = menuGuideFor(role);
 
   return (
     <main className="page wide">
@@ -124,8 +125,70 @@ export function DashboardScreen({ token, role }: { token: string; role: UserRole
           </div>
         </section>
       </div>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="card-body">
+          <p className="eyebrow">Navigation</p>
+          <h2 style={{ marginTop: 0 }}>What each menu handles</h2>
+          <p className="page-copy" style={{ marginBottom: 14 }}>
+            TME separates the migration lifecycle into clear work areas so upload, review, execution, admin setup and audit history do not get mixed together.
+          </p>
+          <div className="grid three">
+            {menuGuide.map((item) => (
+              <article className="menu-guide-card" key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.why}</p>
+                <strong>Handles</strong>
+                <span>{item.handles}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   );
+}
+
+function menuGuideFor(role: UserRole) {
+  const guide = [
+    {
+      title: 'Overview',
+      why: 'Start here when you need to know whether TME is healthy and what needs attention.',
+      handles: 'Backend status, migration totals, pending review, writer readiness and the governed import path.',
+    },
+    {
+      title: 'Upload New',
+      why: 'This is where new business data enters the system before TME analyzes or routes it.',
+      handles: 'Excel, CSV, PDF and scan uploads, including multiple files processed as separate migration jobs.',
+    },
+    {
+      title: 'Worklist',
+      why: 'This keeps review and execution controlled instead of letting uploads write directly into a destination system.',
+      handles: 'Mapping review, validation issues, simulation, approvals and execution-ready migration items.',
+    },
+    {
+      title: 'History',
+      why: 'This is the audit trail for what has already happened, whether it succeeded, failed or still needs investigation.',
+      handles: 'Past migrations, row counts, success and failure totals, statuses and import evidence.',
+    },
+  ];
+
+  if (role === 'ADMIN') {
+    guide.push(
+      {
+        title: 'Integrations',
+        why: 'TME should only read from or write to systems through approved, encrypted connector configurations.',
+        handles: 'Connector plugins, SDK capability checks, encrypted connection settings, test access, enable and disable controls.',
+      },
+      {
+        title: 'Pipelines',
+        why: 'Reusable pipelines define how source data moves into destinations once connectors are approved.',
+        handles: 'Pipeline templates, source and destination selection, activation, run history, stage status and cancellation.',
+      },
+    );
+  }
+
+  return guide;
 }
 
 function MetricBar({
