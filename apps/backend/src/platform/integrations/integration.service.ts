@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConnectionStatus, Prisma } from '@prisma/client';
 import type { CapabilityContext, ConfigurationField } from '@tme/connector-sdk';
+import type { SJBLEntityType } from '@tme/shared';
 import type { AuthUser } from '../../auth/auth.types';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,6 +15,7 @@ import { PluginRegistryService } from '../plugin-registry/plugin-registry.servic
 import { IntegrationCryptoService } from './integration-crypto.service';
 import type {
   CreateIntegrationConnectionDto,
+  PullIntegrationRecordsDto,
   UpdateIntegrationConnectionDto,
   UpdatePluginCatalogDto,
 } from './dto/integration.dto';
@@ -273,6 +275,68 @@ export class IntegrationService implements OnModuleInit {
       details: { message: result.message, capabilities: result.capabilities },
     });
     return result;
+  }
+
+  async discoverResources(id: string, user: AuthUser) {
+    const runtime = await this.runtimeConfiguration(id, user.organizationId);
+    if (!runtime.capabilities.includes('read')) {
+      throw new BadRequestException('Integration connection does not provide a reader capability');
+    }
+    const reader = this.plugins.reader(runtime.pluginId);
+    const result = await reader.discover({
+      organizationId: user.organizationId,
+      connectionId: id,
+      pipelineRunId: `connection-discover:${id}`,
+      configuration: runtime.configuration,
+    });
+    await this.audit.record({
+      user,
+      action: 'integration.connection.discover',
+      entityType: 'integration_connection',
+      entityId: id,
+      outcome: 'success',
+      details: { resourceCount: result.resources.length },
+    });
+    return result;
+  }
+
+  async pullRecords(id: string, body: PullIntegrationRecordsDto, user: AuthUser) {
+    const runtime = await this.runtimeConfiguration(id, user.organizationId);
+    if (!runtime.capabilities.includes('read')) {
+      throw new BadRequestException('Integration connection does not provide a reader capability');
+    }
+    const reader = this.plugins.reader(runtime.pluginId);
+    const pages = reader.read(
+      {
+        resourceId: body.resourceId,
+        entityTypes: body.entityTypes as SJBLEntityType[] | undefined,
+        cursor: body.cursor,
+        pageSize: body.pageSize || 25,
+        changedSince: body.changedSince,
+      },
+      {
+        organizationId: user.organizationId,
+        connectionId: id,
+        pipelineRunId: `connection-pull:${id}`,
+        configuration: runtime.configuration,
+      },
+    );
+    for await (const page of pages) {
+      await this.audit.record({
+        user,
+        action: 'integration.connection.pull_preview',
+        entityType: 'integration_connection',
+        entityId: id,
+        outcome: 'success',
+        details: {
+          resourceId: body.resourceId,
+          recordCount: page.records.length,
+          complete: page.complete,
+        },
+      });
+      return page;
+    }
+    return { records: [], complete: true };
   }
 
   async runtimeConfiguration(id: string, organizationId: string) {

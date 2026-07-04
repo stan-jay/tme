@@ -15,6 +15,7 @@ import { Roles } from '../../auth/roles.decorator';
 import { RolesGuard } from '../../auth/roles.guard';
 import {
   CreateIntegrationConnectionDto,
+  PullIntegrationRecordsDto,
   UpdateIntegrationConnectionDto,
   UpdatePluginCatalogDto,
 } from './dto/integration.dto';
@@ -71,6 +72,20 @@ export class IntegrationController {
   @Post('connections/:id/test')
   testConnection(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return this.integrations.test(id, request.user);
+  }
+
+  @Get('connections/:id/discover')
+  discoverConnection(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.integrations.discoverResources(id, request.user);
+  }
+
+  @Post('connections/:id/pull')
+  pullConnectionRecords(
+    @Param('id') id: string,
+    @Body() body: PullIntegrationRecordsDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.integrations.pullRecords(id, body, request.user);
   }
 
   @Delete('connections/:id')

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../api';
 
@@ -15,6 +15,8 @@ interface PipelineDefinition {
   operation: string;
   status: string;
   version: number;
+  sourceConnectionId?: string;
+  destinationConnectionIds: string[];
   stages: PipelineStage[];
 }
 
@@ -50,6 +52,8 @@ export function PipelinesScreen({ token }: { token: string }) {
   const [name, setName] = useState('Standard migration pipeline');
   const [sourceConnectionId, setSourceConnectionId] = useState('');
   const [destinationConnectionId, setDestinationConnectionId] = useState('');
+  const [sourceResourceId, setSourceResourceId] = useState('');
+  const [entityType, setEntityType] = useState('');
   const definitions = useQuery({
     queryKey: ['pipeline-definitions', token],
     queryFn: () => apiFetch<PipelineDefinition[]>('/platform/pipelines', token),
@@ -91,10 +95,19 @@ export function PipelinesScreen({ token }: { token: string }) {
     onSuccess: refresh,
   });
   const start = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch(`/platform/pipelines/${id}/runs`, token, {
+    mutationFn: (definition: PipelineDefinition) =>
+      apiFetch(`/platform/pipelines/${definition.id}/runs`, token, {
         method: 'POST',
-        body: JSON.stringify({ idempotencyKey: crypto.randomUUID(), input: {} }),
+        body: JSON.stringify({
+          idempotencyKey: crypto.randomUUID(),
+          input: {
+            sourceConnectionId: definition.sourceConnectionId || undefined,
+            destinationConnectionId: definition.destinationConnectionIds[0],
+            sourceResourceId: sourceResourceId || undefined,
+            entityTypes: entityType ? [entityType] : undefined,
+            pageSize: 100,
+          },
+        }),
       }),
     onSuccess: refresh,
   });
@@ -109,6 +122,13 @@ export function PipelinesScreen({ token }: { token: string }) {
   const loading = definitions.isPending || connections.isPending || runs.isPending;
   const readers = (connections.data || []).filter((connection) => connection.capabilities.includes('read'));
   const writers = (connections.data || []).filter((connection) => connection.capabilities.includes('write'));
+  const supportedSourceTypes = Array.from(
+    new Set(
+      readers
+        .filter((connection) => !sourceConnectionId || connection.id === sourceConnectionId)
+        .flatMap((connection) => connection.supportedEntityTypes),
+    ),
+  ).sort();
 
   return (
     <main className="page wide">
@@ -148,6 +168,27 @@ export function PipelinesScreen({ token }: { token: string }) {
         </select>
         <button className="btn primary" disabled={createTemplate.isPending}>Create pipeline template</button>
       </form>
+      <section className="card" style={{ marginBottom: 24 }}>
+        <div className="card-body">
+          <p className="eyebrow">API pull options</p>
+          <h2 style={{ marginTop: 0 }}>Records pulled by the pipeline</h2>
+          <p className="page-copy">
+            When a template uses a reader connection, each run can pull a specific source resource or entity type before mapping, validating and writing to the destination.
+          </p>
+          <div className="form-inline compact" style={{ marginTop: 12 }}>
+            <input
+              value={sourceResourceId}
+              onChange={(event) => setSourceResourceId(event.target.value)}
+              placeholder="Source resource ID, for example orders or Invoice"
+            />
+            <select value={entityType} onChange={(event) => setEntityType(event.target.value)}>
+              <option value="">All supported entity types</option>
+              {supportedSourceTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+            <span className="badge">Pull {'->'} map {'->'} validate {'->'} write</span>
+          </div>
+        </div>
+      </section>
       {error && <p className="callout danger">{error instanceof Error ? error.message : 'Pipeline request failed'}</p>}
       {loading && <p className="callout">Loading pipeline definitions, connections and runs…</p>}
       {loadError && <p className="callout danger">{loadError.message}</p>}
@@ -169,10 +210,13 @@ export function PipelinesScreen({ token }: { token: string }) {
               <span className={`badge ${definition.status === 'ACTIVE' ? 'success' : 'warning'}`}>{definition.status}</span>{' '}
               <span className="badge">v{definition.version}</span>
             </p>
+            <p className="muted">
+              Source {definition.sourceConnectionId || 'manual/file'} · Destination {definition.destinationConnectionIds[0] || 'selected at run time'}
+            </p>
             <p className="muted">{definition.stages.map((stage) => stage.key).join(' → ')}</p>
             <div className="button-row">
               {definition.status !== 'ACTIVE' && <button className="btn secondary" onClick={() => activate.mutate(definition.id)}>Activate</button>}
-              <button className="btn primary" disabled={definition.status !== 'ACTIVE'} onClick={() => start.mutate(definition.id)}>Start run</button>
+              <button className="btn primary" disabled={definition.status !== 'ACTIVE'} onClick={() => start.mutate(definition)}>Start run</button>
             </div>
             </div>
           </article>

@@ -468,6 +468,11 @@ pre { white-space: pre-wrap; word-break: break-word; }
   align-items: end;
 }
 
+.form-inline.compact {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) auto;
+  align-items: center;
+}
+
 .muted { color: var(--muted); }
 
 .bar-list {
@@ -565,6 +570,19 @@ pre { white-space: pre-wrap; word-break: break-word; }
   line-height: 1.45;
 }
 
+.pull-panel {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.pull-panel h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
 @media (max-width: 980px) {
   .app-shell,
   .auth-card {
@@ -588,7 +606,8 @@ pre { white-space: pre-wrap; word-break: break-word; }
   .grid.two,
   .grid.three,
   .grid.four,
-  .form-inline {
+  .form-inline,
+  .form-inline.compact {
     grid-template-columns: 1fr;
   }
 }

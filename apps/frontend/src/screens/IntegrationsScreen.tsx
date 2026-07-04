@@ -28,6 +28,24 @@ interface PluginCatalog {
   existingConnectionsAllowed: boolean;
 }
 
+interface DiscoveryResource {
+  id: string;
+  name: string;
+  entityTypes: string[];
+  estimatedCount?: number;
+}
+
+interface DiscoveryResult {
+  resources: DiscoveryResource[];
+}
+
+interface PullResult {
+  records: Array<Record<string, unknown>>;
+  nextCursor?: string;
+  checkpoint?: string;
+  complete: boolean;
+}
+
 export interface IntegrationConnection {
   id: string;
   pluginId: string;
@@ -88,9 +106,11 @@ export function IntegrationsScreen({ token }: { token: string }) {
   const loading = catalog.isPending || connections.isPending;
   const loadError = catalog.error || connections.error;
   const enabledPlugins = (catalog.data || []).filter((plugin) => plugin.globalEnabled).length;
+  const sourcePlugins = (catalog.data || []).filter((plugin) => plugin.manifest.capabilities.includes('read')).length;
   const writerConnections = (connections.data || []).filter((connection) =>
     connection.plugin.manifest.capabilities.includes('write'),
   ).length;
+  const categories = Array.from(new Set((catalog.data || []).map((plugin) => plugin.category))).sort();
 
   return (
     <main className="page wide">
@@ -106,7 +126,7 @@ export function IntegrationsScreen({ token }: { token: string }) {
       <div className="grid four" style={{ marginBottom: 16 }}>
         <div className="metric-card"><div className="metric-label">Plugins</div><p className="metric-value">{catalog.data?.length || 0}</p></div>
         <div className="metric-card"><div className="metric-label">Enabled</div><p className="metric-value">{enabledPlugins}</p></div>
-        <div className="metric-card"><div className="metric-label">Connections</div><p className="metric-value">{connections.data?.length || 0}</p></div>
+        <div className="metric-card"><div className="metric-label">Reader plugins</div><p className="metric-value">{sourcePlugins}</p></div>
         <div className="metric-card"><div className="metric-label">Writers</div><p className="metric-value">{writerConnections}</p></div>
       </div>
 
@@ -115,10 +135,15 @@ export function IntegrationsScreen({ token }: { token: string }) {
           <p className="eyebrow">Connector SDK</p>
           <h2 style={{ marginTop: 0 }}>Capability-based integrations</h2>
           <p className="page-copy">
-            Connectors advertise reader, writer, mapper, validator, watcher and rollback capabilities.
-            The UI should approve plugin manifests, store encrypted connection settings, test access,
-            and expose only compatible destinations to migration and pipeline workflows.
+            Connectors are grouped by business system category. Reader connectors pull source records,
+            writer connectors push clean SJBL records to destinations, and bidirectional connectors can do both.
+            Credentials stay encrypted while the UI exposes only approved sources and destinations to pipelines.
           </p>
+          <div className="button-row" style={{ marginTop: 12 }}>
+            {categories.map((category) => (
+              <span className="badge" key={category}>{category}</span>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -133,7 +158,13 @@ export function IntegrationsScreen({ token }: { token: string }) {
           <article key={plugin.id} className="card">
             <div className="card-body form-grid">
             <h3 style={{ marginTop: 0 }}>{plugin.name}</h3>
-            <p><span className="badge">{plugin.category}</span> {plugin.manifest.capabilities.map((capability) => <span key={capability} className="badge">{capability}</span>)}</p>
+            <p>
+              <span className="badge">{plugin.category}</span>{' '}
+              {plugin.manifest.capabilities.map((capability) => <span key={capability} className="badge">{capability}</span>)}
+            </p>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Handles {plugin.manifest.configurationSchema.length} setup field(s). Supports {(plugin.manifest as { supportedEntityTypes?: string[] }).supportedEntityTypes?.join(', ') || 'configured records'}.
+            </p>
             <label>
               Technical status
               <select
@@ -253,9 +284,29 @@ function ConnectionCard({
   token: string;
   onChanged: () => void;
 }) {
+  const [resourceId, setResourceId] = useState('');
+  const [entityType, setEntityType] = useState('');
+  const [pullResult, setPullResult] = useState<PullResult | null>(null);
+  const isReader = connection.plugin.manifest.capabilities.includes('read');
   const test = useMutation({
     mutationFn: () => apiFetch<{ connected: boolean; message: string }>(`/platform/integrations/connections/${connection.id}/test`, token, { method: 'POST' }),
     onSuccess: onChanged,
+  });
+  const discover = useQuery({
+    queryKey: ['integration-discovery', connection.id, token],
+    queryFn: () => apiFetch<DiscoveryResult>(`/platform/integrations/connections/${connection.id}/discover`, token),
+    enabled: isReader && connection.enabled && connection.status === 'CONNECTED',
+  });
+  const pull = useMutation({
+    mutationFn: () => apiFetch<PullResult>(`/platform/integrations/connections/${connection.id}/pull`, token, {
+      method: 'POST',
+      body: JSON.stringify({
+        resourceId: resourceId || undefined,
+        entityTypes: entityType ? [entityType] : undefined,
+        pageSize: 10,
+      }),
+    }),
+    onSuccess: setPullResult,
   });
   const update = useMutation({
     mutationFn: (enabled: boolean) => apiFetch(`/platform/integrations/connections/${connection.id}`, token, {
@@ -275,7 +326,12 @@ function ConnectionCard({
     <article className="card">
       <div className="card-body">
       <h3>{connection.name}</h3>
-      <p><span className="badge">{connection.plugin.name}</span> <span className={`badge ${connection.enabled ? 'success' : 'warning'}`}>{connection.status}</span></p>
+      <p>
+        <span className="badge">{connection.plugin.name}</span>{' '}
+        <span className="badge">{connection.plugin.category}</span>{' '}
+        {connection.plugin.manifest.capabilities.map((capability) => <span key={capability} className="badge">{capability}</span>)}{' '}
+        <span className={`badge ${connection.enabled ? 'success' : 'warning'}`}>{connection.status}</span>
+      </p>
       <p>Secrets configured: {connection.configuredSecretFields.join(', ') || 'none'}</p>
       {connection.lastTestMessage && <p>Last test: {connection.lastTestMessage}</p>}
       <div className="button-row">
@@ -292,6 +348,54 @@ function ConnectionCard({
         </button>
       </div>
       {(test.error || update.error || remove.error) && <p className="callout danger">{(test.error || update.error || remove.error)?.message}</p>}
+      {isReader && connection.enabled && connection.status === 'CONNECTED' && (
+        <div className="pull-panel">
+          <div>
+            <p className="eyebrow">Pull records</p>
+            <h4>Preview source data before building a migration</h4>
+          </div>
+          <div className="form-inline compact">
+            <select value={resourceId} onChange={(event) => setResourceId(event.target.value)}>
+              <option value="">All resources</option>
+              {(discover.data?.resources || []).map((resource) => (
+                <option key={resource.id} value={resource.id}>
+                  {resource.name} {resource.estimatedCount ? `(${resource.estimatedCount})` : ''}
+                </option>
+              ))}
+            </select>
+            <select value={entityType} onChange={(event) => setEntityType(event.target.value)}>
+              <option value="">All entity types</option>
+              {Array.from(new Set((discover.data?.resources || []).flatMap((resource) => resource.entityTypes))).map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            <button className="btn secondary" onClick={() => pull.mutate()} disabled={pull.isPending || discover.isPending}>
+              {pull.isPending ? 'Pulling...' : 'Pull preview'}
+            </button>
+          </div>
+          {discover.error && <p className="callout danger">{discover.error.message}</p>}
+          {pull.error && <p className="callout danger">{pull.error.message}</p>}
+          {pullResult && (
+            <div className="table-card">
+              <table>
+                <thead>
+                  <tr><th>Type</th><th>ID</th><th>Source</th><th>Preview</th></tr>
+                </thead>
+                <tbody>
+                  {pullResult.records.map((record, index) => (
+                    <tr key={`${String(record.id || index)}-${index}`}>
+                      <td>{String(record.type || 'record')}</td>
+                      <td>{String(record.id || '-')}</td>
+                      <td>{String(record.externalSource || '-')}</td>
+                      <td>{JSON.stringify(record).slice(0, 180)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </article>
   );

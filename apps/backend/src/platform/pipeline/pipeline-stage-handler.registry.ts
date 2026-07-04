@@ -127,19 +127,29 @@ class ReadStageHandler implements PipelineStageHandler {
 
     const reader = this.plugins.reader(runtime.pluginId);
     const configuration = asObject(context.stage.configuration);
-    const pageSize = Math.max(1, Math.min(500, Number(configuration.pageSize || 100)));
-    const entityTypes = stringArray(configuration.entityTypes as Prisma.JsonValue) as SJBLEntityType[];
+    const pageSize = Math.max(1, Math.min(500, Number(configuration.pageSize || context.input.pageSize || 100)));
+    const entityTypes = (
+      stringArray(configuration.entityTypes as Prisma.JsonValue).length
+        ? stringArray(configuration.entityTypes as Prisma.JsonValue)
+        : stringArray(context.input.entityTypes as Prisma.JsonValue)
+    ) as SJBLEntityType[];
     const entities: SJBLEntity[] = [];
     let cursor = stringInput(configuration, 'cursor') || undefined;
     let checkpoint: string | undefined;
     for (;;) {
       const pages = reader.read(
         {
-          resourceId: stringInput(configuration, 'resourceId') || undefined,
+          resourceId:
+            stringInput(configuration, 'resourceId') ||
+            stringInput(context.input, 'sourceResourceId') ||
+            undefined,
           entityTypes,
           cursor,
           pageSize,
-          changedSince: stringInput(configuration, 'changedSince') || undefined,
+          changedSince:
+            stringInput(configuration, 'changedSince') ||
+            stringInput(context.input, 'changedSince') ||
+            undefined,
         },
         {
           organizationId: context.organizationId,

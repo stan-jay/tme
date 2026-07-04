@@ -1,11 +1,15 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsArray,
   IsEnum,
+  IsInt,
   IsObject,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { PluginCommercialStatus, PluginTechnicalStatus } from '@prisma/client';
@@ -65,4 +69,32 @@ export class UpdateIntegrationConnectionDto {
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
+}
+
+export class PullIntegrationRecordsDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  resourceId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  entityTypes?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cursor?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  changedSince?: string;
 }
