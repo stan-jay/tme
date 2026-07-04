@@ -1,5 +1,6 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const REQUEST_TIMEOUT_MS = 15_000;
+export const AUTH_EXPIRED_EVENT = 'tme:auth-expired';
 
 export async function apiFetch<T>(
   path: string,
@@ -27,6 +28,9 @@ export async function apiFetch<T>(
           : Array.isArray(body?.message)
             ? body.message.join(', ')
             : `Request failed with status ${response.status}`;
+      if (response.status === 401) {
+        window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, { detail: message }));
+      }
       throw new Error(message);
     }
     return body as T;

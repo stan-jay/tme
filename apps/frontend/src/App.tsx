@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { API_URL } from './api';
+import { API_URL, AUTH_EXPIRED_EVENT } from './api';
+import { DashboardScreen } from './screens/DashboardScreen';
 import { MigrationHistoryScreen } from './screens/MigrationHistoryScreen';
 import { UploadScreen } from './screens/UploadScreen';
 import { IntegrationsScreen } from './screens/IntegrationsScreen';
@@ -10,7 +11,7 @@ import { WorklistScreen } from './screens/WorklistScreen';
 const queryClient = new QueryClient();
 
 type UserRole = 'ADMIN' | 'REVIEWER' | 'EXECUTOR' | 'UPLOADER';
-type Screen = 'upload' | 'worklist' | 'history' | 'integrations' | 'pipelines';
+type Screen = 'overview' | 'upload' | 'worklist' | 'history' | 'integrations' | 'pipelines';
 
 interface SessionUser {
   id: string;
@@ -27,18 +28,60 @@ interface LoginResponse {
 }
 
 function App() {
-  const [token, setToken] = useState(() => sessionStorage.getItem('tme_token') || '');
+  const [token, setToken] = useState(() => readStoredToken());
   const [user, setUser] = useState<SessionUser | null>(() => readStoredUser(token));
-  const [currentScreen, setCurrentScreen] = useState<Screen>('upload');
+  const [currentScreen, setCurrentScreen] = useState<Screen>(() => screenFromLocation() || 'overview');
+  const [sessionMessage, setSessionMessage] = useState(() => sessionStorage.getItem('tme_session_message') || '');
+  const clearSession = useCallback((message = '') => {
+    sessionStorage.removeItem('tme_token');
+    sessionStorage.removeItem('tme_user');
+    if (message) sessionStorage.setItem('tme_session_message', message);
+    else sessionStorage.removeItem('tme_session_message');
+    queryClient.clear();
+    setToken('');
+    setUser(null);
+    setCurrentScreen('overview');
+    setSessionMessage(message);
+    if (window.location.hash || window.location.pathname !== '/') {
+      window.history.replaceState(null, '', '/');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (window.location.pathname !== '/') {
+      window.history.replaceState(null, '', `/${window.location.hash || ''}`);
+    }
+    const onHashChange = () => {
+      const screen = screenFromLocation();
+      if (screen) setCurrentScreen(screen);
+    };
+    const onAuthExpired = (event: Event) => {
+      const message = event instanceof CustomEvent && typeof event.detail === 'string'
+        ? event.detail
+        : 'Your session expired. Sign in again.';
+      clearSession(message);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
+    return () => {
+      window.removeEventListener('hashchange', onHashChange);
+      window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired);
+    };
+  }, [clearSession]);
 
   if (!token) {
     return (
       <LoginScreen
+        sessionMessage={sessionMessage}
         onLogin={(session) => {
           sessionStorage.setItem('tme_token', session.accessToken);
           sessionStorage.setItem('tme_user', JSON.stringify(session.user));
+          sessionStorage.removeItem('tme_session_message');
+          setSessionMessage('');
           setToken(session.accessToken);
           setUser(session.user);
+          setCurrentScreen('overview');
+          window.history.replaceState(null, '', '/#overview');
         }}
       />
     );
@@ -66,7 +109,10 @@ function App() {
               <button
                 key={item.screen}
                 className={`nav-button ${safeScreen === item.screen ? 'active' : ''}`}
-                onClick={() => setCurrentScreen(item.screen)}
+                onClick={() => {
+                  setCurrentScreen(item.screen);
+                  window.history.replaceState(null, '', `/#${item.screen}`);
+                }}
               >
                 <span className="nav-icon">{iconFor(item.screen)}</span>
                 <span>{item.label}</span>
@@ -88,12 +134,7 @@ function App() {
             <button
               className="btn ghost"
               onClick={() => {
-                sessionStorage.removeItem('tme_token');
-                sessionStorage.removeItem('tme_user');
-                queryClient.clear();
-                setToken('');
-                setUser(null);
-                setCurrentScreen('upload');
+                clearSession();
               }}
             >
               Sign out
@@ -111,6 +152,7 @@ function App() {
             </div>
           </div>
           <div className="content-frame">
+            {safeScreen === 'overview' && <DashboardScreen token={token} role={effectiveUser?.role ?? 'UPLOADER'} />}
             {safeScreen === 'upload' && <UploadScreen token={token} role={effectiveUser?.role ?? 'UPLOADER'} />}
             {safeScreen === 'worklist' && <WorklistScreen token={token} role={effectiveUser?.role ?? 'UPLOADER'} />}
             {safeScreen === 'history' && <MigrationHistoryScreen token={token} />}
@@ -123,7 +165,7 @@ function App() {
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: (session: LoginResponse) => void }) {
+function LoginScreen({ onLogin, sessionMessage }: { onLogin: (session: LoginResponse) => void; sessionMessage: string }) {
   const [email, setEmail] = useState('admin@example.com');
   const [organizationSlug, setOrganizationSlug] = useState('stan-jay');
   const [password, setPassword] = useState('');
@@ -182,6 +224,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: LoginResponse) => void })
           <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required />
         </label>
         <button className="btn primary" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
+        {sessionMessage && <p className="callout warning">{sessionMessage}</p>}
         {error && <p className="callout danger">{error}</p>}
       </form>
       </section>
@@ -190,7 +233,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: LoginResponse) => void })
 }
 
 function navigationFor(role: UserRole): Array<{ screen: Screen; label: string }> {
-  const base: Array<{ screen: Screen; label: string }> = [];
+  const base: Array<{ screen: Screen; label: string }> = [{ screen: 'overview', label: 'Overview' }];
   if (role === 'ADMIN' || role === 'UPLOADER') {
     base.push({ screen: 'upload', label: 'Upload New' });
   }
@@ -206,6 +249,17 @@ function navigationFor(role: UserRole): Array<{ screen: Screen; label: string }>
     ];
   }
   return base;
+}
+
+function readStoredToken(): string {
+  const stored = sessionStorage.getItem('tme_token') || '';
+  if (!stored || isTokenExpired(stored)) {
+    sessionStorage.removeItem('tme_token');
+    sessionStorage.removeItem('tme_user');
+    if (stored) sessionStorage.setItem('tme_session_message', 'Your previous session expired. Sign in again.');
+    return '';
+  }
+  return stored;
 }
 
 function readStoredUser(token: string): SessionUser | null {
@@ -243,6 +297,8 @@ export default App;
 
 function iconFor(screen: Screen): string {
   switch (screen) {
+    case 'overview':
+      return '⌂';
     case 'upload':
       return '↑';
     case 'worklist':
@@ -253,6 +309,27 @@ function iconFor(screen: Screen): string {
       return '◆';
     case 'pipelines':
       return '⇄';
+  }
+}
+
+function screenFromLocation(): Screen | null {
+  const hash = window.location.hash.replace(/^#/, '');
+  return isScreen(hash) ? hash : null;
+}
+
+function isScreen(value: string): value is Screen {
+  return ['overview', 'upload', 'worklist', 'history', 'integrations', 'pipelines'].includes(value);
+}
+
+function isTokenExpired(token: string): boolean {
+  const [, payload] = token.split('.');
+  if (!payload) return true;
+  try {
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const parsed = JSON.parse(atob(normalized)) as { exp?: number };
+    return typeof parsed.exp !== 'number' || parsed.exp * 1000 <= Date.now();
+  } catch {
+    return true;
   }
 }
 
